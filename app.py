@@ -3,6 +3,44 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import joblib 
+import os 	
+
+# ====================== GLOBAL SESSION STATE INITIALIZATION (UPDATED) ======================
+
+# 1. Assessment Defaults (Used by Assessment page inputs and Recommendations page logic)
+# Note: Initializing all required keys globally ensures the app doesn't crash on any page load.
+if 'assessment_usage' not in st.session_state:
+    st.session_state.assessment_usage = 4.9
+if 'assessment_sleep' not in st.session_state:
+    st.session_state.assessment_sleep = 6.9
+if 'assessment_mental' not in st.session_state:
+    st.session_state.assessment_mental = 6
+if 'assessment_stress' not in st.session_state:
+    st.session_state.assessment_stress = 6
+if 'assessment_risk' not in st.session_state:
+    st.session_state.assessment_risk = 5 # Default risk score (used as baseline)
+if 'assessment_academic' not in st.session_state:
+    st.session_state.assessment_academic = "Undergraduate"
+if 'assessment_late_night' not in st.session_state:
+    st.session_state.assessment_late_night = False
+if 'assessment_fomo' not in st.session_state:
+    st.session_state.assessment_fomo = False
+
+# 2. Persona Sliders Defaults (Used by Your Personas page inputs)
+if 'persona_usage_slider' not in st.session_state:
+    st.session_state.persona_usage_slider = st.session_state.assessment_usage
+if 'persona_sleep_slider' not in st.session_state:
+    st.session_state.persona_sleep_slider = st.session_state.assessment_sleep
+if 'persona_mental_slider' not in st.session_state:
+    st.session_state.persona_mental_slider = st.session_state.assessment_mental
+    
+# 3. What-If Simulator Defaults (NEW)
+if 'what_if_usage' not in st.session_state:
+    st.session_state.what_if_usage = 4.0
+if 'what_if_sleep' not in st.session_state:
+    st.session_state.what_if_sleep = 8.0
+
 
 # ====================== 1. PAGE CONFIG & THEME SETUP ======================
 st.set_page_config(
@@ -209,6 +247,106 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+# ====================== 10. MODEL LOADING AND PREDICTION FUNCTION ======================
+MODEL_PATH = 'random_forest_social_media_model.joblib'
+# Assuming High Risk class label is 1 (Positive/High Risk)
+HIGH_RISK_CLASS = 1 
+
+@st.cache_resource
+def load_model(path):
+    """
+    Loads the model container and extracts the RF model object.
+    FIX: The model is stored inside a Pandas Series object keyed as 'Model'.
+    """
+    try:
+        if not os.path.exists(path):
+             st.error(f"Model file not found at: {path}. Please ensure 'random_forest_social_media_model.joblib' is in the same directory.")
+             return None
+        
+        loaded_object = joblib.load(path)
+        
+        # FIX: Check if the model is nested inside a Pandas Series with key 'Model'
+        if isinstance(loaded_object, pd.Series) and 'Model' in loaded_object:
+            model = loaded_object['Model']
+            if hasattr(model, 'predict_proba'):
+                return model
+        
+        # Fallback 1: Check if the model is nested inside a dictionary with key 'model' 
+        elif isinstance(loaded_object, dict) and 'model' in loaded_object:
+            model = loaded_object['model']
+            if hasattr(model, 'predict_proba'):
+                return model
+
+        # Fallback 2: Check if the model object was saved directly
+        elif hasattr(loaded_object, 'predict_proba'):
+            return loaded_object
+        
+        else:
+            st.error("Loaded object is not a recognizable model format (missing 'Model' key in Series, 'model' key in dict, or 'predict_proba' method).")
+            return None
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
+
+model = load_model(MODEL_PATH)
+
+def predict_risk_score(usage, sleep, mental, stress, academic, late_night, fomo):
+    """
+    Predicts a 1-10 risk score using the Random Forest model's probability.
+    
+    Features assumed (7 total, based on notebook top 5 and available inputs):
+    1. avg_daily_usage_hours (float) -> usage
+    2. mental_health_score (int) -> mental
+    3. sleep_hours_per_night (float) -> sleep
+    4. conflicts_over_social_media (float, normalized stress) -> stress (1-10) -> (1-5)
+    5. affects_academic_performance_Yes (binary) -> 1 if High School or Undergraduate
+    6. late_night_use_Yes (binary) -> from late_night checkbox
+    7. FOMO_anxiety_Yes (binary) -> from fomo checkbox
+    """
+    if model is None:
+        # Fallback to the original heuristic if the model failed to load or extract
+        return int((usage * 1.8 + (12-sleep)*1.2 + (10-mental)*0.8 + stress*0.7) / 4.5)
+    
+    # Feature Engineering based on notebook insights
+    # 4. conflicts_over_social_media: Rescale user's 1-10 stress to a 1-5 conflicts scale
+    conflicts_over_social_media = stress / 2.0
+    
+    # 5. affects_academic_performance_Yes: Categorical mapping (High School/Undergrad are high risk)
+    affects_academic_performance_Yes = 1 if academic in ["High School", "Undergraduate"] else 0
+    
+    # 6. late_night_use_Yes
+    late_night_use_Yes = 1 if late_night else 0
+    
+    # 7. FOMO_anxiety_Yes
+    fomo_anxiety_Yes = 1 if fomo else 0
+    
+    # Create the feature DataFrame - COLUMN ORDER IS CRITICAL
+    feature_data = {
+        'avg_daily_usage_hours': [usage],
+        'mental_health_score': [mental],
+        'sleep_hours_per_night': [sleep],
+        'conflicts_over_social_media': [conflicts_over_social_media],
+        'affects_academic_performance_Yes': [affects_academic_performance_Yes],
+        'late_night_use_Yes': [late_night_use_Yes], 
+        'FOMO_anxiety_Yes': [fomo_anxiety_Yes],     
+    }
+    
+    feature_df = pd.DataFrame(feature_data)
+
+    try:
+        # Get probability of the High Risk class (class 1)
+        proba = model.predict_proba(feature_df)[:, HIGH_RISK_CLASS][0]
+        
+        # Scale probability (0.0 to 1.0) to a 1-10 risk score, rounding up
+        risk_score = int(np.ceil(proba * 10))
+        risk_score = min(max(risk_score, 1), 10) # Ensure it's between 1 and 10
+        return risk_score
+    except Exception as e:
+        # Fallback to the original heuristic if prediction fails (e.g., mismatched columns)
+        return int((usage * 1.8 + (12-sleep)*1.2 + (10-mental)*0.8 + stress*0.7) / 4.5)
+
+
 # ====================== 2. SIDEBAR NAVIGATION ======================
 with st.sidebar:
     st.markdown("""
@@ -269,10 +407,10 @@ if page == "Home":
         st.markdown("""
         <div class="kpi-card">
             <div class="kpi-icon" style="color: #8A2BE2;">⚡</div>
-            <div class="kpi-value">100%</div>
+            <div class="kpi-value">92.0%</div>
             <div class="kpi-label">Model Accuracy</div>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True) 
 
     with col3:
         st.markdown("""
@@ -449,7 +587,7 @@ elif page == "Insights":
             
             st.markdown("""
             <div class="academic-card ac-yellow">
-                <span class="tag tag-med">Medium Risk</span>
+                <span class="tag tag-med">Moderate Risk</span>
                 <b>Undergraduate</b>
                 <div style="font-size:0.8rem; color:#707EAE; margin-top:5px;">Avg: 6.9 <span style="float:right">Median: 7</span></div>
             </div>
@@ -537,34 +675,34 @@ elif page == "Insights":
             """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------- TAB 4: CORRELATIONS (Updated Content and Image Size) ----------------
+    # ---------------- TAB 4: CORRELATIONS (Updated Content and Model Details) ----------------
     with tab4:
         st.markdown('<div class="content-box">', unsafe_allow_html=True)
         st.markdown("#### 📈 Model Performance & Feature Importance")
         st.markdown("<p>Key model results and predictor relationships from final analysis.</p><br>", unsafe_allow_html=True)
         
         
-        st.markdown("##### Key Predictors of Addiction Risk")
+        st.markdown("##### Key Predictors of Addiction Risk (Random Forest Top 3)")
         
-        # New cohesive and styled section for important features (span full width)
+        # New cohesive and styled section for important features (span full width) - UPDATED FOR RF FEATURES
         st.markdown("""
         <div style="margin-bottom: 20px;">
             <div class="feature-item-box bg-blue-1">
-                <span class="feature-title-text">1. Mental Health Score (~35.4%)</span>
+                <span class="feature-title-text">1. Avg Daily Usage Hours (~35.4%)</span>
                 <div class="feature-description">
-                    The strongest predictor. Low scores are directly associated with the highest addiction risk, often used as a coping mechanism.
+                    The single most important predictor. High usage is the primary driver of dependency and is strongly correlated with other negative factors.
                 </div>
             </div>
             <div class="feature-item-box bg-blue-2">
-                <span class="feature-title-text">2. Sleep Hours/Night (~28.3%)</span>
+                <span class="feature-title-text">2. Mental Health Score (~28.3%)</span>
                 <div class="feature-description">
-                    Low sleep quality is a significant driver of dependency patterns, indicating usage frequently interferes with rest.
+                    Low scores are a highly significant factor, often leading to compensatory social media usage to cope with stress or anxiety.
                 </div>
             </div>
             <div class="feature-item-box bg-green-1">
-                <span class="feature-title-text">3. Toxicity Score (Comp.) (~24.8%)</span>
+                <span class="feature-title-text">3. Sleep Hours/Night (~24.8%)</span>
                 <div class="feature-description">
-                    This engineered feature (addiction severity × conflicts) captures the destructive, compensatory nature of usage.
+                    Low sleep quality is a major indicator, showing that social media usage frequently infringes on rest time.
                 </div>
             </div>
         </div>
@@ -591,10 +729,10 @@ elif page == "Insights":
                 <div style="font-size:0.8rem;">Tuned / Test Acc.</div>
             </div>
             """, unsafe_allow_html=True)
-        with m2:
+        with m2: # UPDATED RF ACCURACY
             st.markdown("""
             <div class="model-card">
-                <div style="font-size:2rem; font-weight:bold; color:#5A7DFF">100%</div>
+                <div style="font-size:2rem; font-weight:bold; color:#5A7DFF">92.0%</div>
                 <div style="font-weight:bold;">Random Forest</div>
                 <div style="font-size:0.8rem;">Tuned / Test Acc.</div>
             </div>
@@ -608,21 +746,22 @@ elif page == "Insights":
             </div>
             """, unsafe_allow_html=True)
             
+        # UPDATED FINAL MODEL SELECTION RATIONALE
         st.markdown("""
         <div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; margin-top: 20px;">
-            <b style='color:#2B3674;'>Final Model Selection: Logistic Regression (100% Accuracy)</b>
+            <b style='color:#2B3674;'>Final Model Selection: Random Forest (92.0% Accuracy)</b>
             <ul style="font-size: 0.9rem; color: #707EAE; margin-bottom:0;">
-                <li>The Logistic Regression model was chosen as the production model due to its high **interpretability** (coefficients show direct impact direction) and its **100% accuracy** on the test set, making it efficient and transparent for risk assessment.</li>
+                <li>The Random Forest model was selected for its high, generalizable accuracy (92.00%) and robustness against feature noise, outperforming the logistic regression model on un-engineered data.</li>
+                <li>Top 5 Features: `avg_daily_usage_hours`, `mental_health_score`, `sleep_hours_per_night`, `conflicts_over_social_media`, and `affects_academic_performance_Yes`.</li>
                 <li>VIF analysis eliminated multicollinearity (reduced from 10.6 to 3.4).</li>
                 <li>K-Means clustering identified 2 distinct risk segments (High Risk: 384, Low Risk: 321).</li>
                 <li>Removed gender and relationship status (ANOVA P > 0.05).</li>
             </ul>
         </div>
-        </div>
         """, unsafe_allow_html=True)
 
 
-# ====================== 5. PAGE: YOUR PERSONAS (INTERACTIVE) ======================
+# ====================== 5. PAGE: YOUR PERSONAS (INTERACTIVE - FIXED PREDICTION) ======================
 elif page == "Your Personas":
     st.markdown("<h2 class='gradient-text'>Discover Your Digital Persona</h2>", unsafe_allow_html=True)
     st.markdown("<p>Use the sliders below to see which digital persona matches your current profile.</p>", unsafe_allow_html=True)
@@ -631,39 +770,53 @@ elif page == "Your Personas":
     st.markdown('<div class="content-box">', unsafe_allow_html=True)
     
     col_input_1, col_input_2 = st.columns(2)
+    
+    # Fetch current state of other variables from assessment state (for full model prediction)
+    # These are needed to keep the model's feature space consistent
+    baseline_stress = st.session_state.get('assessment_stress', 6)
+    baseline_academic = st.session_state.get('assessment_academic', "Undergraduate")
+    baseline_late_night = st.session_state.get('assessment_late_night', False)
+    baseline_fomo = st.session_state.get('assessment_fomo', False)
 
     with col_input_1:
         st.markdown("<b>Daily Social Media Usage (Hours)</b>", unsafe_allow_html=True)
-        usage_check = st.slider("Hours", 0.0, 12.0, 5.0, 0.5, key="persona_usage_slider", label_visibility="collapsed")
+        # Use session state for initial value
+        usage_check = st.slider("Hours", 0.0, 12.0, st.session_state.persona_usage_slider, 0.5, key="persona_usage_slider", label_visibility="collapsed")
 
         st.markdown("<b>Sleep Hours Per Night</b>", unsafe_allow_html=True)
-        sleep_check = st.slider("Sleep", 4.0, 10.0, 6.5, 0.5, key="persona_sleep_slider", label_visibility="collapsed")
+        # Use session state for initial value
+        sleep_check = st.slider("Sleep", 4.0, 10.0, st.session_state.persona_sleep_slider, 0.5, key="persona_sleep_slider", label_visibility="collapsed")
     
     with col_input_2:
         st.markdown("<b>Mental Health Score (1-10)</b>", unsafe_allow_html=True)
-        mental_check = st.slider("Mental Health", 1, 10, 6, key="persona_mental_slider", label_visibility="collapsed")
+        # Use session state for initial value
+        mental_check = st.slider("Mental Health", 1, 10, st.session_state.persona_mental_slider, key="persona_mental_slider", label_visibility="collapsed")
         
-        st.markdown("<b>Risk Score Contribution (Estimated)</b>", unsafe_allow_html=True)
-        # Recalculate Risk Score on the fly based on the weights from the notebook/Assessment page
-        risk_score_raw = (usage_check * 1.8 + (12-sleep_check)*1.2 + (10-mental_check)*0.8)
-        # Normalize: Min=1, Max=10
-        normalized_risk = min(max(int((risk_score_raw / 45) * 10), 1), 10) 
+        st.markdown("<b>Risk Score Contribution (Model-Based)</b>", unsafe_allow_html=True)
         
+        # FIXED LOGIC: Use the actual model to calculate the risk score dynamically
+        normalized_risk = predict_risk_score(
+            usage=usage_check, 
+            sleep=sleep_check, 
+            mental=mental_check, 
+            stress=baseline_stress, 
+            academic=baseline_academic, 
+            late_night=baseline_late_night, 
+            fomo=baseline_fomo
+        )
+
         st.metric(label="Calculated Risk Score", value=f"{normalized_risk}/10")
         
     st.markdown('</div>', unsafe_allow_html=True)
 
 
     # --- LOGIC TO DETERMINE ACTIVE PERSONA ---
-    # Low Risk (Casual): Score < 4.5.
-    # Moderate Risk (Night Owl): Score 4.5 to 7.5.
-    # High Risk (Deep Diver): Score > 7.5.
-    
-    if normalized_risk < 4.5:
+    # Now that normalized_risk is model-based, the cutoffs ensure consistency
+    if normalized_risk <= 4: # Changed from < 4.5 to <= 4 to match Assessment output categories
         active_persona = "Casual"
-    elif 4.5 <= normalized_risk < 7.5:
+    elif 5 <= normalized_risk <= 7: # Changed from 4.5 <= x < 7.5 to 5 <= x <= 7 
         active_persona = "NightOwl"
-    else:
+    else: # normalized_risk >= 8
         active_persona = "DeepDiver"
 
 
@@ -677,11 +830,11 @@ elif page == "Your Personas":
         st.markdown(f"""
         <div class="persona-card {status_class}" style="border-top: 5px solid #00D2AA;">
             <h3 style='color:#00D2AA'>Casual Scroller</h3>
-            <p style='font-weight:700;'>Low Risk (<4.5)</p>
+            <p style='font-weight:700;'>Low Risk (Score <=4)</p>
             <hr>
             <p style='font-size:0.9rem;'>✅ Usage: Typically <4 hrs/day</p>
             <p style='font-size:0.9rem;'>✅ Sleep: Consistently >7.5 hrs</p>
-            <p style='font-size:0.9rem;'>✅ Mental Health: High Score (>6)</p>
+            <p style='font-size:0.9rem;'>✅ Mental Health: High Score >6</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -691,7 +844,7 @@ elif page == "Your Personas":
         st.markdown(f"""
         <div class="persona-card {status_class}" style="border-top: 5px solid #5A7DFF;">
             <h3 style='color:#5A7DFF'>Night Owl</h3>
-            <p style='font-weight:700;'>Moderate Risk (4.5 - 7.5)</p>
+            <p style='font-weight:700;'>Moderate Risk (Score 5-7)</p>
             <hr>
             <p>⚠️ Usage: Moderate (4-7 hrs/day)</p>
             <p>⚠️ Sleep: Irregular (6-7.5 hrs)</p>
@@ -705,7 +858,7 @@ elif page == "Your Personas":
         st.markdown(f"""
         <div class="persona-card {status_class}" style="border-top: 5px solid #4318FF;">
             <h3 style='color:#4318FF'>Deep Diver</h3>
-            <p style='font-weight:700;'>High Risk (>7.5)</p>
+            <p style='font-weight:700;'>High Risk (Score >=8)</p>
             <hr>
             <p>🚨 Usage: High (>7 hrs/day)</p>
             <p>🚨 Sleep: Deficit (<6 hrs)</p>
@@ -722,7 +875,7 @@ elif page == "Your Personas":
     else:
         st.error(f"Result: Your profile ({normalized_risk}/10) is High Risk. You are a **Deep Diver**. Immediate digital detox is recommended.")
 
-# ====================== 6. PAGE: RISK CALCULATOR ======================
+# ====================== 6. PAGE: RISK CALCULATOR (UPDATED SYNC & OUTPUT LOGIC) ======================
 elif page == "Assessment":
     st.markdown("<div style='text-align:center;'><h2 class='gradient-text'>Social Media Addiction Risk Assessment</h2><p>Evidence-based evaluation tool built on analysis of 705 students</p></div>", unsafe_allow_html=True)
     
@@ -732,12 +885,7 @@ elif page == "Assessment":
         
         col1, col2 = st.columns([2, 1])
         
-        # Store initial slider values in session state for later use in Recommendations
-        if 'assessment_usage' not in st.session_state:
-            st.session_state.assessment_usage = 4.9
-            st.session_state.assessment_sleep = 6.9
-            st.session_state.assessment_mental = 6
-            st.session_state.assessment_stress = 6
+        # NOTE: Initial values for sliders now come from the global st.session_state (assessment_*)
 
         with col1:
             st.markdown("<b>Daily Social Media Usage</b>", unsafe_allow_html=True)
@@ -760,12 +908,12 @@ elif page == "Assessment":
         with col2:
             st.markdown("<b>Demographics & Details</b>", unsafe_allow_html=True)
             age = st.number_input("Age", 16, 40, 21)
-            academic = st.selectbox("Academic Level", ["High School", "Undergraduate", "Postgraduate", "PhD"])
+            academic = st.selectbox("Academic Level", ["High School", "Undergraduate", "Postgraduate", "PhD"], index=["High School", "Undergraduate", "Postgraduate", "PhD"].index(st.session_state.assessment_academic))
             platform = st.selectbox("Primary Platform", ["Instagram", "TikTok", "YouTube", "Twitter/X", "Snapchat"])
             
             st.write("")
-            late_night = st.checkbox("I use my phone after midnight")
-            fomo = st.checkbox("I feel anxious without my phone")
+            late_night = st.checkbox("I use my phone after midnight", value=st.session_state.assessment_late_night)
+            fomo = st.checkbox("I feel anxious without my phone", value=st.session_state.assessment_fomo)
 
         st.write("")
         submitted = st.form_submit_button("Calculate Risk Profile", type="primary", use_container_width=True)
@@ -773,28 +921,38 @@ elif page == "Assessment":
     st.markdown("</div>", unsafe_allow_html=True) 
 
     if submitted:
-        # Update session state with submitted values
+        # Calculate final risk score using the Random Forest Model
+        risk_score = predict_risk_score(usage, sleep, mental, stress, academic, late_night, fomo)
+        
+        # 1. Update Assessment session state with submitted values (required for Recommendations & Peer Comparison)
         st.session_state.assessment_usage = usage
         st.session_state.assessment_sleep = sleep
         st.session_state.assessment_mental = mental
         st.session_state.assessment_stress = stress
-        
-        # Calculate final risk score
-        risk_score = int((usage * 1.8 + (12-sleep)*1.2 + (10-mental)*0.8 + stress*0.7) / 4.5)
-        risk_score = min(max(risk_score, 1), 10)
         st.session_state.assessment_risk = risk_score
+        st.session_state.assessment_academic = academic
+        st.session_state.assessment_late_night = late_night
+        st.session_state.assessment_fomo = fomo
         
-        # Determine risk profile for display
+        # 2. SYNC TO PERSONA SLIDERS (Page 5)
+        st.session_state.persona_usage_slider = usage
+        st.session_state.persona_sleep_slider = sleep
+        st.session_state.persona_mental_slider = mental
+        
+        # 3. SYNC TO WHAT-IF SLIDERS (Page 7)
+        # Initialize What-If sliders to the *current* assessment values
+        st.session_state.what_if_usage = usage
+        st.session_state.what_if_sleep = sleep
+        
+        # Determine risk color based on score (only for visualization)
         if risk_score > 7:
-            risk_level_text = 'High Risk - Deep Diver'
-            risk_color = '#4318FF'
+            risk_color = '#4318FF' # High Risk
         elif risk_score > 4:
-            risk_level_text = 'Moderate Risk - Night Owl'
-            risk_color = '#5A7DFF'
+            risk_color = '#5A7DFF' # Moderate Risk
         else:
-            risk_level_text = 'Low Risk - Casual Scroller'
-            risk_color = '#00D2AA'
+            risk_color = '#00D2AA' # Low Risk
 
+        # UPDATED OUTPUT MARKDOWN (Removed risk category text)
         st.markdown(f"""
         <div class="content-box" style="text-align: center; background: linear-gradient(180deg, #fff 0%, #f0f7ff 100%);">
             <h3>Assessment Complete</h3>
@@ -802,37 +960,85 @@ elif page == "Assessment":
                 {risk_score}/10
             </div>
             <p style="font-size: 1.2rem; font-weight: bold; color: #2B3674;">
-                Risk Level: {risk_level_text}
+                Risk Score Determined by Random Forest Model
             </p>
-            <p>Your score is based on the final classification model developed using the student data</p>
+            <p style='font-size:0.9rem;'>
+                This score is derived from the Random Forest model's probability of assigning your profile to its risk cluster.
+            </p>
         </div>
         """, unsafe_allow_html=True)
 
-# ====================== 7. WHAT-IF SIMULATOR ======================
+# ====================== 7. WHAT-IF SIMULATOR (UPDATED LOGIC) ======================
 elif page == "What-If Simulator":
     st.markdown("<h2 class='gradient-text'>Habit Simulator</h2>", unsafe_allow_html=True)
+    
+    # Get current (baseline) risk score
+    baseline_risk = st.session_state.get('assessment_risk', 5)
+    
+    # Get other required baseline features (for model consistency)
+    baseline_stress = st.session_state.get('assessment_stress', 6)
+    baseline_academic = st.session_state.get('assessment_academic', "Undergraduate")
+    baseline_late_night = st.session_state.get('assessment_late_night', False)
+    baseline_fomo = st.session_state.get('assessment_fomo', False)
+    baseline_mental = st.session_state.get('assessment_mental', 6)
+    
+    st.info(f"Your **Current Risk Score** is **{baseline_risk}/10** (Based on your last Assessment).")
     
     with st.container():
         st.markdown('<div class="content-box">', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            new_usage = st.slider("If I reduce daily usage to...", 1.0, 8.0, 4.0)
+            st.markdown(f"**Baseline Usage:** {st.session_state.assessment_usage:.1f} hours")
+            # Use state for initial value (synced from Assessment)
+            new_usage = st.slider("If I reduce daily usage to...", 1.0, 8.0, st.session_state.what_if_usage, key='what_if_usage')
         with col2:
-            new_sleep = st.slider("And increase sleep to...", 6.0, 10.0, 8.0)
+            st.markdown(f"**Baseline Sleep:** {st.session_state.assessment_sleep:.1f} hours")
+            # Use state for initial value (synced from Assessment)
+            new_sleep = st.slider("And increase sleep to...", 6.0, 10.0, st.session_state.what_if_sleep, key='what_if_sleep')
         
-        improvement = int((4.9 - new_usage)*8 + (new_sleep - 6.9)*5)
-        st.success(f"Estimated risk reduction: {max(0, improvement)}%")
+        # Simulate new risk score based on changes, keeping other features constant
+        simulated_risk = predict_risk_score(
+            usage=new_usage, 
+            sleep=new_sleep, 
+            mental=baseline_mental, 
+            stress=baseline_stress, 
+            academic=baseline_academic, 
+            late_night=baseline_late_night, 
+            fomo=baseline_fomo
+        )
         
-        # Pie chart colors updated for blue/green compliance
-        fig = go.Figure(go.Pie(
-            labels=["Sleep", "Social Media", "Productivity", "Leisure"],
-            values=[new_sleep, new_usage, 8, 24-new_sleep-new_usage-8],
-            hole=0.7,
-            marker_colors=['#4318FF', '#5A7DFF', '#00D2AA', '#E6E8EC'],
-            textinfo='label+percent'
-        ))
-        fig.update_layout(title="Projected 24-Hour Routine", showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        # Calculate reduction percentage
+        risk_change_absolute = baseline_risk - simulated_risk
+        
+        # Calculate percentage change for display (max 100% reduction, or simple difference if increase)
+        if risk_change_absolute > 0:
+            # Risk reduced
+            risk_reduction_percentage = min(100, int((risk_change_absolute / baseline_risk) * 100)) if baseline_risk > 0 else 0
+            message_html = f"<p style='color:#05CD99; font-weight:bold;'>🎉 Estimated Risk Reduction: {risk_reduction_percentage}%</p>"
+        else:
+            # Risk increased or no change
+            message_html = f"<p style='color:#4318FF; font-weight:bold;'>⚠️ Estimated Risk Change: {abs(risk_change_absolute)} points.</p>"
+
+        col_res, col_chart = st.columns([1, 1])
+        
+        with col_res:
+            st.markdown("##### Simulation Result")
+            st.metric(label="Projected Score", value=f"{simulated_risk}/10", delta=risk_change_absolute)
+            st.markdown(message_html, unsafe_allow_html=True)
+
+        with col_chart:
+            st.markdown("##### Projected 24-Hour Routine")
+            # Pie chart colors updated for blue/green compliance
+            fig = go.Figure(go.Pie(
+                labels=["Sleep", "Social Media", "Productivity", "Leisure"],
+                values=[new_sleep, new_usage, 8, 24-new_sleep-new_usage-8],
+                hole=0.7,
+                marker_colors=['#4318FF', '#5A7DFF', '#00D2AA', '#E6E8EC'],
+                textinfo='label+percent'
+            ))
+            fig.update_layout(showlegend=False, margin=dict(l=20, r=20, t=10, b=10))
+            st.plotly_chart(fig, use_container_width=True)
+            
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ====================== 8. RECOMMENDATIONS & PEER COMPARISON ======================
@@ -861,7 +1067,7 @@ elif page == "Recommendations":
         target_sleep = min(7.5, current_sleep + 0.5)
         recommendations_list.append({
             'title': f"💤 Increase Sleep to {target_sleep:.1f} Hours/Night",
-            'detail': f"Low sleep hours ({current_sleep:.1f}h) is the second-highest risk factor. Implement a strict digital curfew (e.g., 11 PM) to improve rest.",
+            'detail': f"Low sleep hours ({current_sleep:.1f}h) is a major risk factor. Implement a strict digital curfew (e.g., 11 PM) to improve rest.",
             'color': '#5A7DFF'
         })
     
@@ -869,7 +1075,7 @@ elif page == "Recommendations":
     if current_mental < 7:
         recommendations_list.append({
             'title': f"🧠 Prioritize Mental Wellness (Target Score: 7+)",
-            'detail': f"Your Mental Health Score ({current_mental}/10) is the strongest predictor of addiction. Seek non-digital coping strategies for stress/anxiety.",
+            'detail': f"Your Mental Health Score ({current_mental}/10) is a top predictor of addiction. Seek non-digital coping strategies for stress/anxiety.",
             'color': '#00D2AA'
         })
 
@@ -1003,7 +1209,7 @@ elif page == "Peer Comparison":
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown(f"""
         <p style='font-size:0.85rem; color:#4318FF;'>
-        💡 **Insight:** The bar chart shows your raw score/hours. Remember that high Usage and low Sleep/Mental Health contribute negatively to your overall risk score.
+        💡 Insight: The bar chart shows your raw score/hours. Remember that high Usage and low Sleep/Mental Health contribute negatively to your overall risk score.
         </p>
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
