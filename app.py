@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS - COMBINED (Updated for strict Blue/Green palette + Robust Radio Button Fix)
+# Custom CSS - COMBINED (ROBUST FIXES FOR SLIDER AND ALERT BOXES)
 st.markdown("""
 <style>
     /* Main Background - Restored to original light blue/grey */
@@ -73,23 +73,45 @@ st.markdown("""
         transition: all 0.3s ease;
     }
 
-    /* === RADIO BUTTON COLOR FIX (PRIMARY BLUE) === */
-    /* Changes the checked (selected) radio input border/fill color */
-    div.stRadio > label > div[data-testid="stDecoration"] {
-        border-color: #A3AED0; /* Default unchecked border color */
-    }
+    /* === GLOBAL COLOR OVERRIDES === */
+
+    /* 1. RADIO BUTTON COLOR FIX (Sidebar/Navigation) */
     div.stRadio > label > div[data-testid="stDecoration"]:has(+ input:checked) {
         border-color: #4318FF !important; 
         background-color: #4318FF !important; 
     }
-    /* Changes the checked radio button dot color (default is white) */
-    div.stRadio > label > div[data-testid="stDecoration"]:has(+ input:checked)::after {
-        background-color: white !important;
-    }
-    /* Changes the text color of the active radio label */
     .stRadio > label:has(input:checked) span {
         color: #4318FF !important;
         font-weight: 600;
+    }
+
+    /* 2. SLIDER COLOR FIX (Track and Thumb) */
+    /* Targetting the filled track color */
+    div.stSlider [data-baseweb="slider"] > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) {
+        background: #4318FF !important; /* Blue for the filled track */
+    }
+    /* Targetting the thumb/handle color */
+    div.stSlider [data-baseweb="slider"] > div:nth-child(1) > div:nth-child(1) > div:nth-child(4) {
+        background: #4318FF !important; /* Blue for the thumb */
+        border-color: #4318FF !important;
+    }
+    
+    /* 3. ALERT BOX COLOR FIX (st.warning and st.error) */
+    /* st.warning background, border, and icon (default yellow/orange) -> Blue */
+    div[data-testid="stAlert"] [class*="warning"] {
+        background-color: #F0F5FF !important; /* Light blue background */
+        border-left-color: #4318FF !important;
+    }
+    div[data-testid="stAlert"] [class*="warning"] svg {
+        fill: #4318FF !important; /* Blue icon */
+    }
+    /* st.error background, border, and icon (default red) -> Blue */
+    div[data-testid="stAlert"] [class*="error"] {
+        background-color: #F0F5FF !important; /* Light blue background */
+        border-left-color: #4318FF !important;
+    }
+    div[data-testid="stAlert"] [class*="error"] svg {
+        fill: #4318FF !important; /* Blue icon */
     }
 
 
@@ -147,11 +169,6 @@ st.markdown("""
         border-radius: 15px;
     }
     
-    /* Assessment/Persona Page Color Adjustments */
-    .stAlert {
-        border-color: #4318FF !important;
-    }
-
     /* Custom styles for the feature importance list items */
     .feature-item-box {
         padding: 15px;
@@ -173,6 +190,22 @@ st.markdown("""
     .bg-blue-1 { background-color: #E6F7FF; border-left: 4px solid #4318FF; }
     .bg-blue-2 { background-color: #F0F5FF; border-left: 4px solid #5A7DFF; }
     .bg-green-1 { background-color: #E6FFFA; border-left: 4px solid #05CD99; }
+
+    /* === PERSONA CARD STYLES === */
+    .persona-card {
+        transition: all 0.3s ease;
+        padding: 25px;
+        border-radius: 15px;
+        background: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        height: 100%;
+        border: 3px solid transparent; /* Default border is transparent */
+    }
+    .active-card {
+        transform: scale(1.03);
+        border: 3px solid #4318FF !important; /* Highlighted blue border */
+        box-shadow: 0 10px 30px rgba(67, 24, 255, 0.2); /* Stronger blue shadow */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -200,7 +233,6 @@ with st.sidebar:
     ])
     
     st.markdown("---")
-    # Removed the st.info("v2.0.1 | Connected to Student DB") line
 
 # ====================== 3. PAGE: HOME ======================
 if page == "Home":
@@ -593,75 +625,102 @@ elif page == "Insights":
 # ====================== 5. PAGE: YOUR PERSONAS (INTERACTIVE) ======================
 elif page == "Your Personas":
     st.markdown("<h2 class='gradient-text'>Discover Your Digital Persona</h2>", unsafe_allow_html=True)
-    st.markdown("<p>Drag the slider to see how different daily usage hours define these categories.</p>", unsafe_allow_html=True)
+    st.markdown("<p>Use the sliders below to see which digital persona matches your current profile.</p>", unsafe_allow_html=True)
 
-    # 1. Add Interactivity: A Slider
-    usage_check = st.slider("Select Daily Usage Hours:", 0.0, 12.0, 5.0, 0.5)
+    # --- INPUT SLIDERS ---
+    st.markdown('<div class="content-box">', unsafe_allow_html=True)
+    
+    col_input_1, col_input_2 = st.columns(2)
 
-    # 2. Logic to determine active persona
-    active_persona = "None"
-    if usage_check < 4.0:
+    with col_input_1:
+        st.markdown("<b>Daily Social Media Usage (Hours)</b>", unsafe_allow_html=True)
+        usage_check = st.slider("Hours", 0.0, 12.0, 5.0, 0.5, key="persona_usage_slider", label_visibility="collapsed")
+
+        st.markdown("<b>Sleep Hours Per Night</b>", unsafe_allow_html=True)
+        sleep_check = st.slider("Sleep", 4.0, 10.0, 6.5, 0.5, key="persona_sleep_slider", label_visibility="collapsed")
+    
+    with col_input_2:
+        st.markdown("<b>Mental Health Score (1-10)</b>", unsafe_allow_html=True)
+        mental_check = st.slider("Mental Health", 1, 10, 6, key="persona_mental_slider", label_visibility="collapsed")
+        
+        st.markdown("<b>Risk Score Contribution (Estimated)</b>", unsafe_allow_html=True)
+        # Recalculate Risk Score on the fly based on the weights from the notebook/Assessment page
+        risk_score_raw = (usage_check * 1.8 + (12-sleep_check)*1.2 + (10-mental_check)*0.8)
+        # Normalize: Min=1, Max=10
+        normalized_risk = min(max(int((risk_score_raw / 45) * 10), 1), 10) 
+        
+        st.metric(label="Calculated Risk Score", value=f"{normalized_risk}/10")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+    # --- LOGIC TO DETERMINE ACTIVE PERSONA ---
+    # Low Risk (Casual): Score < 4.5.
+    # Moderate Risk (Night Owl): Score 4.5 to 7.5.
+    # High Risk (Deep Diver): Score > 7.5.
+    
+    if normalized_risk < 4.5:
         active_persona = "Casual"
-    elif 4.0 <= usage_check < 7.0:
+    elif 4.5 <= normalized_risk < 7.5:
         active_persona = "NightOwl"
     else:
         active_persona = "DeepDiver"
 
+
+    # --- PERSONA CARDS ---
+    st.write("")
     col1, col2, col3 = st.columns(3)
 
     # CASUAL SCROLLER CARD
     with col1:
-        status_class = "active-card" if active_persona == "Casual" else "inactive-card"
+        status_class = "active-card" if active_persona == "Casual" else ""
         st.markdown(f"""
         <div class="persona-card {status_class}" style="border-top: 5px solid #00D2AA;">
-            <h3>Casual Scroller</h3>
-            <h1 style="color: #00D2AA;">&lt; 4h</h1>
-            <p>Your Input: {usage_check}h</p>
+            <h3 style='color:#00D2AA'>Casual Scroller</h3>
+            <p style='font-weight:700;'>Low Risk (<4.5)</p>
             <hr>
-            <p>✅ Good sleep quality</p>
-            <p>✅ Low stress levels</p>
-            <p>✅ Balanced lifestyle</p>
+            <p style='font-size:0.9rem;'>✅ Usage: Typically <4 hrs/day</p>
+            <p style='font-size:0.9rem;'>✅ Sleep: Consistently >7.5 hrs</p>
+            <p style='font-size:0.9rem;'>✅ Mental Health: High Score (>6)</p>
         </div>
         """, unsafe_allow_html=True)
 
-    # NIGHT OWL CARD 
+    # NIGHT OWL CARD
     with col2:
-        status_class = "active-card" if active_persona == "NightOwl" else "inactive-card"
+        status_class = "active-card" if active_persona == "NightOwl" else ""
         st.markdown(f"""
         <div class="persona-card {status_class}" style="border-top: 5px solid #5A7DFF;">
-            <h3>Night Owl</h3>
-            <h1 style="color: #5A7DFF;">4h - 7h</h1>
-            <p>Your Input: {usage_check}h</p>
+            <h3 style='color:#5A7DFF'>Night Owl</h3>
+            <p style='font-weight:700;'>Moderate Risk (4.5 - 7.5)</p>
             <hr>
-            <p>⚠️ Late night activity</p>
-            <p>⚠️ Moderate anxiety</p>
-            <p>⚠️ Irregular sleep</p>
+            <p>⚠️ Usage: Moderate (4-7 hrs/day)</p>
+            <p>⚠️ Sleep: Irregular (6-7.5 hrs)</p>
+            <p>⚠️ Mental Health: Moderate (4-6)</p>
         </div>
         """, unsafe_allow_html=True)
 
-    # DEEP DIVER CARD 
+    # DEEP DIVER CARD
     with col3:
-        status_class = "active-card" if active_persona == "DeepDiver" else "inactive-card"
+        status_class = "active-card" if active_persona == "DeepDiver" else ""
         st.markdown(f"""
         <div class="persona-card {status_class}" style="border-top: 5px solid #4318FF;">
-            <h3>Deep Diver</h3>
-            <h1 style="color: #4318FF;">&gt; 7h</h1>
-            <p>Your Input: {usage_check}h</p>
+            <h3 style='color:#4318FF'>Deep Diver</h3>
+            <p style='font-weight:700;'>High Risk (>7.5)</p>
             <hr>
-            <p>🚨 High FOMO</p>
-            <p>🚨 Platform loyal</p>
-            <p>🚨 Significant sleep loss</p>
+            <p>🚨 Usage: High (>7 hrs/day)</p>
+            <p>🚨 Sleep: Deficit (<6 hrs)</p>
+            <p>🚨 Mental Health: Low Score (<4)</p>
         </div>
         """, unsafe_allow_html=True)
 
-    # 4. Dynamic Message below cards 
+    # Dynamic Message below cards 
     st.write("")
     if active_persona == "Casual":
-        st.success("Result: You are in the Healthy Zone!")
+        st.success(f"Result: Your profile ({normalized_risk}/10) is in the Healthy Zone! You are a **Casual Scroller**.")
     elif active_persona == "NightOwl":
-        st.warning("Result: You are showing signs of dependency.")
+        st.warning(f"Result: Your profile ({normalized_risk}/10) shows moderate risk. You are a **Night Owl** showing signs of dependency.")
     else:
-        st.error("Result: High Risk. Immediate digital detox recommended.")
+        st.error(f"Result: Your profile ({normalized_risk}/10) is High Risk. You are a **Deep Diver**. Immediate digital detox is recommended.")
 
 # ====================== 6. PAGE: RISK CALCULATOR ======================
 elif page == "Assessment":
@@ -673,23 +732,30 @@ elif page == "Assessment":
         
         col1, col2 = st.columns([2, 1])
         
+        # Store initial slider values in session state for later use in Recommendations
+        if 'assessment_usage' not in st.session_state:
+            st.session_state.assessment_usage = 4.9
+            st.session_state.assessment_sleep = 6.9
+            st.session_state.assessment_mental = 6
+            st.session_state.assessment_stress = 6
+
         with col1:
             st.markdown("<b>Daily Social Media Usage</b>", unsafe_allow_html=True)
-            usage = st.slider("Hours", 0.5, 12.0, 4.9, label_visibility="collapsed")
+            usage = st.slider("Hours", 0.5, 12.0, st.session_state.assessment_usage, key='usage_input', label_visibility="collapsed")
             st.caption(f"Selected: {usage} hours/day (Average student: 4.9 hours)")
             st.write("")
 
             st.markdown("<b>Sleep Hours Per Night</b>", unsafe_allow_html=True)
-            sleep = st.slider("Hours", 4.0, 12.0, 6.9, label_visibility="collapsed")
+            sleep = st.slider("Hours", 4.0, 12.0, st.session_state.assessment_sleep, key='sleep_input', label_visibility="collapsed")
             st.caption(f"Selected: {sleep} hours/night (Average student: 6.9 hours)")
             st.write("")
 
             st.markdown("<b>Mental Health Score (1-10)</b>", unsafe_allow_html=True)
-            mental = st.slider("Score", 1, 10, 6, label_visibility="collapsed")
+            mental = st.slider("Score", 1, 10, st.session_state.assessment_mental, key='mental_input', label_visibility="collapsed")
             st.write("")
 
             st.markdown("<b>Stress Level (1-10)</b>", unsafe_allow_html=True)
-            stress = st.slider("Stress", 1, 10, 6, label_visibility="collapsed")
+            stress = st.slider("Stress", 1, 10, st.session_state.assessment_stress, key='stress_input', label_visibility="collapsed")
 
         with col2:
             st.markdown("<b>Demographics & Details</b>", unsafe_allow_html=True)
@@ -707,18 +773,36 @@ elif page == "Assessment":
     st.markdown("</div>", unsafe_allow_html=True) 
 
     if submitted:
-        # Simple risk calculation based on notebook findings
+        # Update session state with submitted values
+        st.session_state.assessment_usage = usage
+        st.session_state.assessment_sleep = sleep
+        st.session_state.assessment_mental = mental
+        st.session_state.assessment_stress = stress
+        
+        # Calculate final risk score
         risk_score = int((usage * 1.8 + (12-sleep)*1.2 + (10-mental)*0.8 + stress*0.7) / 4.5)
         risk_score = min(max(risk_score, 1), 10)
+        st.session_state.assessment_risk = risk_score
         
+        # Determine risk profile for display
+        if risk_score > 7:
+            risk_level_text = 'High Risk - Deep Diver'
+            risk_color = '#4318FF'
+        elif risk_score > 4:
+            risk_level_text = 'Moderate Risk - Night Owl'
+            risk_color = '#5A7DFF'
+        else:
+            risk_level_text = 'Low Risk - Casual Scroller'
+            risk_color = '#00D2AA'
+
         st.markdown(f"""
         <div class="content-box" style="text-align: center; background: linear-gradient(180deg, #fff 0%, #f0f7ff 100%);">
             <h3>Assessment Complete</h3>
-            <div style="font-size: 4rem; font-weight: 800; color: {'#4318FF' if risk_score > 7 else '#5A7DFF' if risk_score > 4 else '#00D2AA'};">
+            <div style="font-size: 4rem; font-weight: 800; color: {risk_color};">
                 {risk_score}/10
             </div>
             <p style="font-size: 1.2rem; font-weight: bold; color: #2B3674;">
-                Risk Level: {'High Risk - Deep Diver' if risk_score > 7 else 'Moderate Risk - Night Owl' if risk_score > 4 else 'Low Risk - Casual Scroller'}
+                Risk Level: {risk_level_text}
             </p>
             <p>Your score is based on the final classification model developed using the student data</p>
         </div>
@@ -755,49 +839,175 @@ elif page == "What-If Simulator":
 elif page == "Recommendations":
     st.markdown("<h2 class='gradient-text'>Your Wellness Plan</h2>", unsafe_allow_html=True)
     
-    col1, col2 = st.columns([2,1])
+    # --- RECOMMENDATION LOGIC ---
+    recommendations_list = []
     
-    with col1:
-        st.markdown("""
+    # Safely retrieve values from session state, defaulting to average if assessment wasn't run
+    current_usage = st.session_state.get('assessment_usage', 4.9)
+    current_sleep = st.session_state.get('assessment_sleep', 6.9)
+    current_mental = st.session_state.get('assessment_mental', 6)
+    
+    # 1. USAGE RECOMMENDATION (Threshold: > 4.0 hours is moderate risk)
+    if current_usage >= 4.0:
+        target_usage = max(3.5, current_usage - 1.0)
+        recommendations_list.append({
+            'title': f"📉 Reduce Daily Usage to {target_usage:.1f} Hours",
+            'detail': f"Your current usage of {current_usage:.1f} hours is high. Focus on reducing time spent on high-addiction platforms like WhatsApp and Snapchat.",
+            'color': '#4318FF'
+        })
+
+    # 2. SLEEP RECOMMENDATION (Threshold: < 7.0 hours is below optimal)
+    if current_sleep < 7.0:
+        target_sleep = min(7.5, current_sleep + 0.5)
+        recommendations_list.append({
+            'title': f"💤 Increase Sleep to {target_sleep:.1f} Hours/Night",
+            'detail': f"Low sleep hours ({current_sleep:.1f}h) is the second-highest risk factor. Implement a strict digital curfew (e.g., 11 PM) to improve rest.",
+            'color': '#5A7DFF'
+        })
+    
+    # 3. MENTAL HEALTH RECOMMENDATION (Threshold: < 7 is moderate/high risk)
+    if current_mental < 7:
+        recommendations_list.append({
+            'title': f"🧠 Prioritize Mental Wellness (Target Score: 7+)",
+            'detail': f"Your Mental Health Score ({current_mental}/10) is the strongest predictor of addiction. Seek non-digital coping strategies for stress/anxiety.",
+            'color': '#00D2AA'
+        })
+
+    if not recommendations_list:
+        st.success("🎉 You are currently in the **Low Risk Zone!** Continue maintaining healthy usage (<4 hours), good sleep (>7.5 hours), and high mental health (>7).")
+    else:
+        # Display recommendations
+        st.markdown(f"""
         <div class="content-box">
-            <h3 style="color: #2B3674;">Top Actionable Steps</h3>
-            <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #4318FF; margin: 10px 0;">
-                <b style='color:#2B3674;'>📉 Target Daily Usage: 3.5 Hours</b>
-                <br><span style="color: #00D2AA; font-weight:bold;">Focus on reducing usage on WhatsApp and Snapchat.</span>
-            </div>
-            <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #5A7DFF; margin: 10px 0;">
-                <b style='color:#2B3674;'>💤 Target Sleep: 7.5 Hours</b>
-                <br><span style="color: #00D2AA; font-weight:bold;">Sleep quality is the second-highest predictor of addiction risk.</span>
-            </div>
-             <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #00D2AA; margin: 10px 0;">
-                <b style='color:#2B3674;'>🧠 Improve Mental Health & Cope</b>
-                <br><span style="color: #00D2AA; font-weight:bold;">Mental Health Score is the single strongest predictor of addiction.</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>Resources</h3>
-            <p>Download your full digital wellness report.</p>
-            <button style="background-color: #2B3674; color: white; padding: 10px 20px; border-radius: 5px; border:none; width:100%;">Download PDF</button>
-        </div>
+            <h3 style="color: #2B3674;">Top Actionable Steps Based on Your Profile</h3>
         """, unsafe_allow_html=True)
 
+        for rec in recommendations_list:
+            st.markdown(f"""
+            <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid {rec['color']}; margin: 10px 0;">
+                <b style='color:#2B3674;'>{rec['title']}</b>
+                <br><span style="color: #707EAE; font-weight:normal; font-size: 0.9rem;">{rec['detail']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ====================== 9. PAGE: PEER COMPARISON (UPDATED) ======================
 elif page == "Peer Comparison":
-    st.markdown("<h2 class='gradient-text'>Peer Comparison</h2>", unsafe_allow_html=True)
-    st.info("Your daily usage is higher than 78% of students your age")
+    st.markdown("<h2 class='gradient-text'>Peer Comparison & Risk Profiling</h2>", unsafe_allow_html=True)
+    st.markdown("<p>See how your core lifestyle metrics compare to the average student in the 705-person study cohort.</p>", unsafe_allow_html=True)
+
+    # Safely retrieve values from session state, defaulting to average if assessment wasn't run
+    current_usage = st.session_state.get('assessment_usage', 4.9)
+    current_sleep = st.session_state.get('assessment_sleep', 6.9)
+    current_mental = st.session_state.get('assessment_mental', 6)
     
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        y=['You', 'Avg Student'],
-        x=[5.2, 4.9],
+    # Study Averages (from notebook data)
+    avg_usage = 4.9
+    avg_sleep = 6.9
+    avg_mental = 6.4 
+    
+    # --- 1. DATA FOR GROUPED BAR CHART ---
+    # Metrics: We use the raw values for the bars, not the scaled/normalized values
+    metrics = ['Daily Usage (Hours)', 'Sleep (Hours)', 'Mental Health (Score)']
+    
+    comparison_data = pd.DataFrame({
+        'Metric': metrics,
+        'Your Profile': [current_usage, current_sleep, current_mental],
+        'Average Student': [avg_usage, avg_sleep, avg_mental]
+    })
+    
+    # Melt the data for Plotly Grouped Bar Chart structure
+    df_plot = comparison_data.melt(id_vars='Metric', var_name='Profile', value_name='Value')
+
+    # Create Grouped Bar Chart
+    fig_bar = px.bar(
+        df_plot,
+        x='Value',
+        y='Metric',
+        color='Profile',
         orientation='h',
-        marker_color=['#4318FF', '#00D2AA']
-    ))
-    fig.update_layout(title="Daily Usage Comparison (Hours)", plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig, use_container_width=True)
+        barmode='group',
+        color_discrete_map={
+            'Your Profile': '#4318FF',
+            'Average Student': '#05CD99'
+        },
+        height=350,
+        text='Value'
+    )
+
+    # Customize the chart layout
+    fig_bar.update_traces(
+        texttemplate='%{text:.1f}', 
+        textposition='outside'
+        # Removed marker_corner_radius=5 which was causing the ValueError
+    )
+    fig_bar.update_layout(
+        xaxis_title="Score/Hours (Raw Value)",
+        yaxis_title=None,
+        legend_title=None,
+        legend=dict(orientation="h", y=1.1, yanchor="top", x=0.5, xanchor="center"),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=50, t=20, b=20) # Add margin to the right for text display
+    )
+    
+    col_chart, col_summary = st.columns([3, 2])
+    
+    with col_chart:
+        st.markdown('<div class="content-box">', unsafe_allow_html=True)
+        st.subheader("Raw Metric Comparison")
+        st.plotly_chart(fig_bar, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_summary:
+        st.markdown('<div class="content-box" style="height: 100%;">', unsafe_allow_html=True)
+        st.subheader("Deviation Summary")
+        
+        # Calculate Deviation
+        usage_dev = current_usage - avg_usage
+        sleep_dev = current_sleep - avg_sleep
+        mental_dev = current_mental - avg_mental
+        
+        # Generate Status Messages
+        def get_status(dev, metric, is_higher_better):
+            if abs(dev) < 0.1:
+                return f"<b>{metric}:</b> Similar to peers."
+            
+            if is_higher_better:
+                if dev > 0:
+                    return f"<b>{metric}:</b> **{abs(dev):.1f}** points/hours higher (Healthier)."
+                else:
+                    return f"<b>{metric}:</b> **{abs(dev):.1f}** points/hours lower (Riskier)."
+            else: # Lower value is better (Usage)
+                if dev < 0:
+                    return f"<b>{metric}:</b> **{abs(dev):.1f}** hours lower (Healthier)."
+                else:
+                    return f"<b>{metric}:</b> **{abs(dev):.1f}** hours higher (Riskier)."
+
+        status_messages = [
+            get_status(usage_dev, "Daily Usage", is_higher_better=False),
+            get_status(sleep_dev, "Sleep Hours", is_higher_better=True),
+            get_status(mental_dev, "Mental Health Score", is_higher_better=True)
+        ]
+            
+        st.markdown("<p style='font-size:0.95rem;'>Your assessment profile in detail:</p>", unsafe_allow_html=True)
+        
+        for msg in status_messages:
+            # Need to re-bold the status messages using HTML
+            styled_msg = msg.replace('**', '<span style="font-weight: bold;">')
+            styled_msg = styled_msg.replace('**', '</span>')
+            st.markdown(f"<p style='margin-bottom: 5px; font-size: 0.9rem;'>{styled_msg}</p>", unsafe_allow_html=True)
+        
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <p style='font-size:0.85rem; color:#4318FF;'>
+        💡 **Insight:** The bar chart shows your raw score/hours. Remember that high Usage and low Sleep/Mental Health contribute negatively to your overall risk score.
+        </p>
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ====================== FOOTER ======================
 st.markdown("""
