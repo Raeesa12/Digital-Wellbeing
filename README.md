@@ -1,1 +1,1 @@
-# Digital Wellbeing Dashboard\n\nStreamlit app for social media addiction risk assessment.
+# Digital Wellbeing Dashboard : Streamlit app for social media addiction risk assessment.
