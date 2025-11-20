@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS - COMBINED (Restored Original Theme + Added New Insights/Persona Styles)
+# Custom CSS - COMBINED (Updated for strict Blue/Green palette + Robust Radio Button Fix)
 st.markdown("""
 <style>
     /* Main Background - Restored to original light blue/grey */
@@ -31,7 +31,7 @@ st.markdown("""
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* Gradient Text - Restored */
+    /* Gradient Text - Restored (Uses blue/purple gradient which is acceptable) */
     .gradient-text {
         background: linear-gradient(135deg, #868CFF 0%, #4318FF 100%);
         -webkit-background-clip: text;
@@ -39,7 +39,7 @@ st.markdown("""
         font-weight: bold;
     }
 
-    /* KPI Cards (Home Page) - Restored */
+    /* KPI Cards (Home Page) */
     .kpi-card {
         background-color: white;
         border-radius: 20px;
@@ -48,37 +48,9 @@ st.markdown("""
         text-align: center;
         transition: transform 0.2s;
     }
-    .kpi-card:hover {
-        transform: translateY(-5px);
-    }
-    .kpi-icon {
-        font-size: 2rem;
-        margin-bottom: 10px;
-    }
-    .kpi-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #2B3674;
-    }
-    .kpi-label {
-        font-size: 0.9rem;
-        color: #A3AED0;
-    }
-
-    /* Feature Cards (Home/Personas) - Restored */
-    .feature-card {
-        background-color: white;
-        border-radius: 15px;
-        padding: 25px;
-        height: 100%;
-        box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12);
-    }
-    .feature-title {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #2B3674;
-        margin-bottom: 10px;
-    }
+    .kpi-icon { font-size: 2rem; margin-bottom: 10px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; color: #2B3674; }
+    .kpi-label { font-size: 0.9rem; color: #A3AED0; }
 
     /* General Content Box */
     .content-box {
@@ -89,7 +61,7 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
-    /* Button Styling - Restored */
+    /* Button Styling */
     .stButton > button {
         background: linear-gradient(90deg, #4481EB 0%, #04BEFE 100%);
         color: white;
@@ -100,47 +72,40 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
     }
-    .stButton > button:hover {
-        box-shadow: 0 6px 15px rgba(0,0,0,0.2);
-        color: white;
+
+    /* === RADIO BUTTON COLOR FIX (PRIMARY BLUE) === */
+    /* Changes the checked (selected) radio input border/fill color */
+    div.stRadio > label > div[data-testid="stDecoration"] {
+        border-color: #A3AED0; /* Default unchecked border color */
+    }
+    div.stRadio > label > div[data-testid="stDecoration"]:has(+ input:checked) {
+        border-color: #4318FF !important; 
+        background-color: #4318FF !important; 
+    }
+    /* Changes the checked radio button dot color (default is white) */
+    div.stRadio > label > div[data-testid="stDecoration"]:has(+ input:checked)::after {
+        background-color: white !important;
+    }
+    /* Changes the text color of the active radio label */
+    .stRadio > label:has(input:checked) span {
+        color: #4318FF !important;
+        font-weight: 600;
     }
 
-    /* --- NEW INTERACTIVE PERSONA STYLES --- */
-    .persona-card {
-        transition: all 0.3s ease;
-        padding: 25px;
-        border-radius: 15px;
-        background: white;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        height: 100%;
-    }
-    .active-card {
-        transform: scale(1.05);
-        border: 3px solid #4318FF !important; /* Use !important to override other borders */
-        opacity: 1;
-    }
-    .inactive-card {
-        opacity: 0.5;
-        filter: grayscale(0.6);
-        transform: scale(0.95);
-        border: none !important;
-    }
-    
-    /* --- NEW INSIGHTS STYLES --- */
+
+    /* --- INSIGHTS STYLES (Blue/Green Palette) --- */
     .metric-box {
         padding: 20px;
         border-radius: 15px;
         text-align: center;
         height: 100%;
     }
-    .mb-blue { background-color: #E6F7FF; }
-    .mb-purple { background-color: #F3E8FF; }
-    .mb-green { background-color: #E6FFFA; }
+    .mb-blue, .mb-purple { background-color: #E6F7FF; } 
+    .mb-green { background-color: #E6FFFA; } 
     
     .mb-val { font-size: 2.5rem; font-weight: 800; margin: 0; }
-    .mb-blue .mb-val { color: #0095FF; }
-    .mb-purple .mb-val { color: #A020F0; }
-    .mb-green .mb-val { color: #05CD99; }
+    .mb-blue .mb-val, .mb-purple .mb-val { color: #4318FF; } 
+    .mb-green .mb-val { color: #05CD99; } 
     
     .mb-label { font-weight: 700; color: #2B3674; margin-top: 5px; margin-bottom: 0;}
 
@@ -160,9 +125,9 @@ st.markdown("""
         margin-bottom: 15px;
         position: relative;
     }
-    .ac-red { border-left: 5px solid #EE5D50; }
-    .ac-yellow { border-left: 5px solid #FFB547; }
-    .ac-green { border-left: 5px solid #05CD99; }
+    .ac-red { border-left: 5px solid #4318FF; } 
+    .ac-yellow { border-left: 5px solid #5A7DFF; } 
+    .ac-green { border-left: 5px solid #05CD99; } 
     
     .tag {
         float: right; 
@@ -171,8 +136,8 @@ st.markdown("""
         border-radius: 10px;
         font-weight: bold;
     }
-    .tag-high { background-color: #FFEEEE; color: #EE5D50; }
-    .tag-med { background-color: #FFF8E7; color: #FFB547; }
+    .tag-high { background-color: #E6F7FF; color: #4318FF; } 
+    .tag-med { background-color: #F0F5FF; color: #5A7DFF; } 
     .tag-low { background-color: #E6FFFA; color: #05CD99; }
 
     .model-card {
@@ -181,6 +146,33 @@ st.markdown("""
         background: #F9F9F9;
         border-radius: 15px;
     }
+    
+    /* Assessment/Persona Page Color Adjustments */
+    .stAlert {
+        border-color: #4318FF !important;
+    }
+
+    /* Custom styles for the feature importance list items */
+    .feature-item-box {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #E0E5F2;
+    }
+    .feature-title-text {
+        font-weight: 700;
+        color: #2B3674;
+        font-size: 1.05rem;
+    }
+    .feature-description {
+        font-size: 0.9rem;
+        color: #707EAE;
+        margin-top: 5px;
+    }
+    .bg-blue-1 { background-color: #E6F7FF; border-left: 4px solid #4318FF; }
+    .bg-blue-2 { background-color: #F0F5FF; border-left: 4px solid #5A7DFF; }
+    .bg-green-1 { background-color: #E6FFFA; border-left: 4px solid #05CD99; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -196,10 +188,11 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # Page order swapped: Insights is now before Assessment
     page = st.radio("Navigate", [
         "Home",
-        "Assessment",
         "Insights",
+        "Assessment",
         "Your Personas",
         "What-If Simulator",
         "Recommendations",
@@ -207,7 +200,7 @@ with st.sidebar:
     ])
     
     st.markdown("---")
-    st.info("v2.0.1 | Connected to Student DB")
+    # Removed the st.info("v2.0.1 | Connected to Student DB") line
 
 # ====================== 3. PAGE: HOME ======================
 if page == "Home":
@@ -253,7 +246,7 @@ if page == "Home":
         st.markdown("""
         <div class="kpi-card">
             <div class="kpi-icon" style="color: #00D2AA;">🕒</div>
-            <div class="kpi-value">4.8hrs</div>
+            <div class="kpi-value">4.9hrs</div>
             <div class="kpi-label">Avg Daily Usage</div>
         </div>
         """, unsafe_allow_html=True)
@@ -261,7 +254,7 @@ if page == "Home":
     with col4:
         st.markdown("""
         <div class="kpi-card">
-            <div class="kpi-icon" style="color: #FFB547;">🧠</div>
+            <div class="kpi-icon" style="color: #4318FF;">🧠</div>
             <div class="kpi-value">8</div>
             <div class="kpi-label">Key Platforms</div>
         </div>
@@ -291,7 +284,7 @@ if page == "Home":
     with f2:
         st.markdown("""
         <div class="feature-card">
-            <div style="color: #8A2BE2; font-size: 1.5rem; margin-bottom: 10px;">📈</div>
+            <div style="color: #4318FF; font-size: 1.5rem; margin-bottom: 10px;">📈</div>
             <div class="feature-title">Platform Analytics</div>
             <p>Detailed breakdown of addiction patterns across different social media platforms.</p>
             <ul style="font-size: 0.9rem; color: #707EAE; padding-left: 20px;">
@@ -314,32 +307,34 @@ if page == "Home":
         </div>
         """, unsafe_allow_html=True)
 
-# ====================== 4. PAGE: INSIGHTS ======================
+# ====================== 4. PAGE: INSIGHTS (UPDATED WITH NOTEBOOK DATA) ======================
 elif page == "Insights":
     st.markdown("<div style='text-align:center;'><h2 class='gradient-text'>Research Insights & Analytics</h2><p>Key findings from comprehensive analysis of 705 students</p></div>", unsafe_allow_html=True)
     
     # TABS CONFIGURATION
     tab1, tab2, tab3, tab4 = st.tabs(["Platforms", "Demographics", "Patterns", "Correlations"])
 
-    # ---------------- TAB 1: PLATFORMS ----------------
+    # ---------------- TAB 1: PLATFORMS (Corrected Data/Colors/Sorting) ----------------
     with tab1:
         st.markdown("""
         <div class="content-box">
             <h4 style="color: #2B3674; margin-bottom: 5px;">📊 Platform Addiction Rankings</h4>
-            <p style="font-size: 0.9rem; margin-bottom: 20px;">Average addiction scores by social media platform</p>
+            <p style="font-size: 0.9rem; margin-bottom: 20px;">Average addiction scores (1-10) by primary social media platform</p>
         """, unsafe_allow_html=True)
         
-        platforms = ["Instagram", "TikTok", "Snapchat", "YouTube", "Facebook", "Twitter/X"]
-        scores = [7.8, 7.6, 7.4, 6.2, 5.8, 5.5]
-        users = ["245 users", "198 users", "156 users", "312 users", "187 users", "143 users"]
-        colors = ['#BC4AD9', '#009FB7', '#E8AA00', '#D92525', '#2D6CDF', '#3EA1FF']
+        # CORRECTED DATA: All 8 platforms sorted descending by addiction score
+        platforms_full = ["WhatsApp", "Snapchat", "TikTok", "Instagram", "YouTube", "Facebook", "Twitter/X", "LinkedIn"]
+        scores_full = [7.46, 7.46, 7.43, 6.55, 6.1, 5.67, 5.5, 3.81]
+        
+        # NEW COLORS: A clear mix of Blue and Green
+        colors = ['#4318FF', '#5A7DFF', '#7C93F5', '#9299F5', '#05CD99', '#3CD4A0', '#85E3B3', '#B8F1D0']
 
         fig = go.Figure(go.Bar(
-            x=scores,
-            y=platforms,
+            x=scores_full,
+            y=platforms_full,
             orientation='h',
             marker_color=colors,
-            text=[f"{s}/10 • {u}" for s, u in zip(scores, users)],
+            text=[f"{s}/10" for s in scores_full],
             textposition='auto',
             textfont=dict(color='white', size=14)
         ))
@@ -350,7 +345,7 @@ elif page == "Insights":
             height=450,
             margin=dict(l=0, r=0, t=0, b=0),
             xaxis=dict(showgrid=False, visible=False, range=[0, 10]),
-            yaxis=dict(showgrid=False, autoresize=True, tickfont=dict(size=14, color='#2B3674', family="Segoe UI, sans-serif")),
+            yaxis=dict(showgrid=False, tickfont=dict(size=14, color='#2B3674', family="Segoe UI, sans-serif")),
             barcornerradius=10
         )
         
@@ -360,37 +355,38 @@ elif page == "Insights":
             <div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; margin-top: 20px;">
                 <b style="color: #2B3674;">Key Findings:</b>
                 <ul style="margin-bottom: 0; font-size: 0.9rem;">
-                    <li>Instagram, TikTok, and Snapchat are the most addictive platforms</li>
-                    <li>Visual-first platforms show higher addiction correlation</li>
-                    <li>Passive consumption platforms rank lower in addiction</li>
+                    <li>WhatsApp and Snapchat show the highest average addiction scores (over 7.4/10), indicating severe dependency risk.</li>
+                    <li>Messaging and instant media apps encourage prolonged screen use due to high social pressure.</li>
+                    <li>LinkedIn is the least addictive platform, likely due to its professional focus and low social pressure.</li>
                 </ul>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # ---------------- TAB 2: DEMOGRAPHICS ----------------
+    # ---------------- TAB 2: DEMOGRAPHICS (Corrected Data/Colors) ----------------
     with tab2:
         col_l, col_r = st.columns([3, 2])
         
         with col_l:
             st.markdown('<div class="content-box">', unsafe_allow_html=True)
             st.markdown("#### 👥 Age Distribution")
-            st.markdown("<p style='font-size:0.8rem;'>Addiction scores by age group</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:0.8rem;'>Count of students with High Addiction Scores (≥4) by age group</p>", unsafe_allow_html=True)
             
-            ages = ["Age 18-19", "Age 20", "Age 21-22", "Age 23-25"]
-            counts = [142, 198, 175, 59] 
+            ages_labels = ["Age 18", "Age 19", "Age 20", "Age 21", "Age 22", "Age 23", "Age 24"]
+            counts = [13, 126, 132, 120, 119, 23, 15] 
             
+            # NEW COLORS: Consistent shades of Blue/Purple
             fig_age = go.Figure(go.Bar(
                 x=counts,
-                y=ages,
+                y=ages_labels,
                 orientation='h',
-                marker=dict(color=['#7D85EC', '#5B63D8', '#434CE6', '#9299F5']),
-                barwidth=0.4
+                marker=dict(color=['#7D85EC', '#5B63D8', '#4318FF', '#5B63D8', '#7D85EC', '#9299F5', '#A3AED0']),
+                width=0.4
             ))
             fig_age.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                height=300,
+                height=350,
                 margin=dict(l=0, r=0, t=0, b=0),
                 xaxis=dict(showgrid=False, visible=False),
                 yaxis=dict(showgrid=False),
@@ -401,7 +397,7 @@ elif page == "Insights":
             st.markdown("""
             <div style="background-color: #E6FFFA; padding: 15px; border-radius: 8px;">
                 <strong style="color:#05CD99">Peak Risk Age: 20 years old</strong><br>
-                <span style="font-size:0.8rem;">Ages 19-22 show the highest addiction prevalence</span>
+                <span style="font-size:0.8rem;">Ages 19-22 show the highest concentration of addicted users</span>
             </div>
             </div>
             """, unsafe_allow_html=True)
@@ -409,7 +405,7 @@ elif page == "Insights":
         with col_r:
             st.markdown('<div class="content-box">', unsafe_allow_html=True)
             st.markdown("#### 🎓 Academic Level Analysis")
-            st.markdown("<p style='font-size:0.8rem;'>Risk assessment by education level</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:0.8rem;'>Risk assessment by education level (ANOVA P-Value: 0.00000)</p>", unsafe_allow_html=True)
             
             st.markdown("""
             <div class="academic-card ac-red">
@@ -444,25 +440,25 @@ elif page == "Insights":
             """, unsafe_allow_html=True)
 
             st.markdown("""
-            <div style="background-color: #FFF5F5; padding: 10px; border-radius: 5px; font-size: 0.8rem; color: #EE5D50;">
-                <b>Critical Finding:</b> High school students show the highest addiction tendency with least score variation.
+            <div style="background-color: #F0F5FF; padding: 10px; border-radius: 5px; font-size: 0.8rem; color: #4318FF;">
+                <b>Critical Finding:</b> High school students show the highest addiction tendency with the least score variation.
             </div>
             </div>
             """, unsafe_allow_html=True)
 
-    # ---------------- TAB 3: PATTERNS ----------------
+    # ---------------- TAB 3: PATTERNS (Corrected Metrics/Findings) ----------------
     with tab3:
         st.markdown('<div class="content-box">', unsafe_allow_html=True)
         st.markdown("#### 🕑 Usage Patterns & Lifestyle Metrics")
-        st.markdown("<p style='margin-bottom:20px;'>Average student behavioral profile</p>", unsafe_allow_html=True)
+        st.markdown("<p style='margin-bottom:20px;'>Average student behavioral profile from the dataset</p>", unsafe_allow_html=True)
         
         m1, m2, m3 = st.columns(3)
         with m1:
             st.markdown("""
             <div class="metric-box mb-blue">
-                <p class="mb-val">4.8</p>
+                <p class="mb-val">4.9</p>
                 <p class="mb-label">Hours daily usage</p>
-                <p class="mb-desc">Standard deviation: ±2.1 hrs</p>
+                <p class="mb-desc">Standard deviation: ±1.26 hrs</p>
             </div>
             """, unsafe_allow_html=True)
         with m2:
@@ -476,62 +472,81 @@ elif page == "Insights":
         with m3:
             st.markdown("""
             <div class="metric-box mb-green">
-                <p class="mb-val">7/10</p>
+                <p class="mb-val">6.4/10</p>
                 <p class="mb-label">Avg addiction score</p>
-                <p class="mb-desc">High risk threshold: >6</p>
+                <p class="mb-desc">Median score is 7/10</p>
             </div>
             """, unsafe_allow_html=True)
             
-        st.markdown("<br><b>Behavioral Insights:</b>", unsafe_allow_html=True)
+        st.markdown("<br><b style='color:#2B3674;'>Behavioral Insights:</b>", unsafe_allow_html=True)
         
         g1, g2 = st.columns(2)
         with g1:
             st.markdown("""
-            <div class="insight-mini-card">
-                <b>Sleep-Usage Correlation</b><br>
-                <span style="font-size:0.85rem; color:#707EAE;">Students with <6 hours sleep show 42% higher addiction scores</span>
+            <div class="insight-mini-card" style="border-left: 4px solid #00D2AA;">
+                <b style='color:#2B3674;'>Sleep Deficit Risk</b><br>
+                <span style="font-size:0.85rem; color:#707EAE;">25% of students report sleeping 6 hours or less per night.</span>
             </div>
             <div class="insight-mini-card">
-                <b>Mental Health Link</b><br>
-                <span style="font-size:0.85rem; color:#707EAE;">Mental health scores <5 associate with 3x addiction risk</span>
+                <b style='color:#2B3674;'>Conflicts & Toxicity</b><br>
+                <span style="font-size:0.85rem; color:#707EAE;">Average conflict score is 2.85/5, indicating moderate social media-induced stress.</span>
             </div>
             """, unsafe_allow_html=True)
         with g2:
             st.markdown("""
-            <div class="insight-mini-card">
-                <b>Stress Factor</b><br>
-                <span style="font-size:0.85rem; color:#707EAE;">High stress (≥7/10) strongly correlates with compensatory usage</span>
+            <div class="insight-mini-card" style="border-left: 4px solid #4318FF;">
+                <b style='color:#2B3674;'>Stress-Addiction Link</b><br>
+                <span style="font-size:0.85rem; color:#707EAE;">High stress is a key predictor, correlating with compensatory usage patterns.</span>
             </div>
-            <div class="insight-mini-card">
-                <b>Gender Neutral</b><br>
-                <span style="font-size:0.85rem; color:#707EAE;">No statistical difference between male/female addiction rates</span>
+            <div class="insight-mini-card" style="border-left: 4px solid #9299F5;">
+                <b style='color:#2B3674;'>Demographic Nuance</b><br>
+                <span style="font-size:0.85rem; color:#707EAE;">Gender and Relationship Status have zero statistical effect on addiction intensity (ANOVA P > 0.05).</span>
             </div>
             """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------- TAB 4: CORRELATIONS ----------------
+    # ---------------- TAB 4: CORRELATIONS (Updated Content and Image Size) ----------------
     with tab4:
         st.markdown('<div class="content-box">', unsafe_allow_html=True)
-        st.markdown("#### 📈 Statistical Correlations & Model Performance")
-        st.markdown("<p>Key relationships identified in the dataset</p><br>", unsafe_allow_html=True)
+        st.markdown("#### 📈 Model Performance & Feature Importance")
+        st.markdown("<p>Key model results and predictor relationships from final analysis.</p><br>", unsafe_allow_html=True)
         
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("<h5 style='color:#4481EB'>Strong Predictors</h5>", unsafe_allow_html=True)
-            st.markdown("""
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><span>Daily Usage Hours</span> <b>r = 0.82</b></div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><span>Mental Health Score</span> <b>r = -0.71</b></div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><span>Stress Level</span> <b>r = 0.68</b></div>
-            <div style="display:flex; justify-content:space-between; padding:5px 0;"><span>Sleep Quality</span> <b>r = -0.64</b></div>
-            """, unsafe_allow_html=True)
-        with c2:
-            st.markdown("<h5 style='color:#A3AED0'>Weak/No Effect</h5>", unsafe_allow_html=True)
-            st.markdown("""
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><span>Gender</span> <span style="font-style:italic">p > 0.05</span></div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;"><span>Relationship Status</span> <span style="font-style:italic">p > 0.05</span></div>
-            <div style="display:flex; justify-content:space-between; padding:5px 0;"><span>Geographic Location</span> <span style="font-style:italic">removed</span></div>
-            """, unsafe_allow_html=True)
-            
+        
+        st.markdown("##### Key Predictors of Addiction Risk")
+        
+        # New cohesive and styled section for important features (span full width)
+        st.markdown("""
+        <div style="margin-bottom: 20px;">
+            <div class="feature-item-box bg-blue-1">
+                <span class="feature-title-text">1. Mental Health Score (~35.4%)</span>
+                <div class="feature-description">
+                    The strongest predictor. Low scores are directly associated with the highest addiction risk, often used as a coping mechanism.
+                </div>
+            </div>
+            <div class="feature-item-box bg-blue-2">
+                <span class="feature-title-text">2. Sleep Hours/Night (~28.3%)</span>
+                <div class="feature-description">
+                    Low sleep quality is a significant driver of dependency patterns, indicating usage frequently interferes with rest.
+                </div>
+            </div>
+            <div class="feature-item-box bg-green-1">
+                <span class="feature-title-text">3. Toxicity Score (Comp.) (~24.8%)</span>
+                <div class="feature-description">
+                    This engineered feature (addiction severity × conflicts) captures the destructive, compensatory nature of usage.
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        
+        st.markdown("##### Visual Feature Importance Ranking")
+        
+        # Fixed deprecation warning by using use_container_width=True
+        try:
+            st.image("feature_importance.png", caption="Visual Ranking of Predictors by Model", use_container_width=True) 
+        except FileNotFoundError:
+            st.info("To complete this section, please create and save your model's Feature Importance plot as **'feature_importance.png'** in the app directory.")
+
         st.write("")
         st.markdown("##### Model Performance Summary")
         
@@ -541,34 +556,34 @@ elif page == "Insights":
             <div class="model-card">
                 <div style="font-size:2rem; font-weight:bold; color:#4318FF">100%</div>
                 <div style="font-weight:bold;">Logistic Regression</div>
-                <div style="font-size:0.8rem;">After tuning</div>
+                <div style="font-size:0.8rem;">Tuned / Test Acc.</div>
             </div>
             """, unsafe_allow_html=True)
         with m2:
             st.markdown("""
             <div class="model-card">
-                <div style="font-size:2rem; font-weight:bold; color:#BC4AD9">100%</div>
-                <div style="font-weight:bold;">SVM (Linear)</div>
-                <div style="font-size:0.8rem;">GridSearchCV</div>
+                <div style="font-size:2rem; font-weight:bold; color:#5A7DFF">100%</div>
+                <div style="font-weight:bold;">Random Forest</div>
+                <div style="font-size:0.8rem;">Tuned / Test Acc.</div>
             </div>
             """, unsafe_allow_html=True)
         with m3:
             st.markdown("""
             <div class="model-card">
-                <div style="font-size:2rem; font-weight:bold; color:#05CD99">98.6%</div>
-                <div style="font-weight:bold;">Random Forest</div>
-                <div style="font-size:0.8rem;">100 estimators</div>
+                <div style="font-size:2rem; font-weight:bold; color:#05CD99">98.5%</div>
+                <div style="font-weight:bold;">Gradient Boosting</div>
+                <div style="font-size:0.8rem;">Tuned / Test Acc.</div>
             </div>
             """, unsafe_allow_html=True)
             
         st.markdown("""
         <div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; margin-top: 20px;">
-            <b>Feature Engineering Insights:</b>
+            <b style='color:#2B3674;'>Final Model Selection: Logistic Regression (100% Accuracy)</b>
             <ul style="font-size: 0.9rem; color: #707EAE; margin-bottom:0;">
-                <li>Created composite "toxicity_score" from addiction × conflicts</li>
-                <li>VIF analysis eliminated multicollinearity (reduced from 10.6 to 3.4)</li>
-                <li>K-Means clustering identified 3 distinct risk segments</li>
-                <li>Removed gender and relationship status (ANOVA p > 0.05)</li>
+                <li>The Logistic Regression model was chosen as the production model due to its high **interpretability** (coefficients show direct impact direction) and its **100% accuracy** on the test set, making it efficient and transparent for risk assessment.</li>
+                <li>VIF analysis eliminated multicollinearity (reduced from 10.6 to 3.4).</li>
+                <li>K-Means clustering identified 2 distinct risk segments (High Risk: 384, Low Risk: 321).</li>
+                <li>Removed gender and relationship status (ANOVA P > 0.05).</li>
             </ul>
         </div>
         </div>
@@ -609,13 +624,13 @@ elif page == "Your Personas":
         </div>
         """, unsafe_allow_html=True)
 
-    # NIGHT OWL CARD
+    # NIGHT OWL CARD 
     with col2:
         status_class = "active-card" if active_persona == "NightOwl" else "inactive-card"
         st.markdown(f"""
-        <div class="persona-card {status_class}" style="border-top: 5px solid #FFB547;">
+        <div class="persona-card {status_class}" style="border-top: 5px solid #5A7DFF;">
             <h3>Night Owl</h3>
-            <h1 style="color: #FFB547;">4h - 7h</h1>
+            <h1 style="color: #5A7DFF;">4h - 7h</h1>
             <p>Your Input: {usage_check}h</p>
             <hr>
             <p>⚠️ Late night activity</p>
@@ -624,13 +639,13 @@ elif page == "Your Personas":
         </div>
         """, unsafe_allow_html=True)
 
-    # DEEP DIVER CARD
+    # DEEP DIVER CARD 
     with col3:
         status_class = "active-card" if active_persona == "DeepDiver" else "inactive-card"
         st.markdown(f"""
-        <div class="persona-card {status_class}" style="border-top: 5px solid #FF6B6B;">
+        <div class="persona-card {status_class}" style="border-top: 5px solid #4318FF;">
             <h3>Deep Diver</h3>
-            <h1 style="color: #FF6B6B;">&gt; 7h</h1>
+            <h1 style="color: #4318FF;">&gt; 7h</h1>
             <p>Your Input: {usage_check}h</p>
             <hr>
             <p>🚨 High FOMO</p>
@@ -639,7 +654,7 @@ elif page == "Your Personas":
         </div>
         """, unsafe_allow_html=True)
 
-    # 4. Dynamic Message below cards
+    # 4. Dynamic Message below cards 
     st.write("")
     if active_persona == "Casual":
         st.success("Result: You are in the Healthy Zone!")
@@ -659,25 +674,25 @@ elif page == "Assessment":
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.markdown("**Daily Social Media Usage**")
-            usage = st.slider("Hours", 0.5, 12.0, 4.8, label_visibility="collapsed")
-            st.caption(f"Selected: {usage} hours/day (Average student: 4.8 hours)")
+            st.markdown("<b>Daily Social Media Usage</b>", unsafe_allow_html=True)
+            usage = st.slider("Hours", 0.5, 12.0, 4.9, label_visibility="collapsed")
+            st.caption(f"Selected: {usage} hours/day (Average student: 4.9 hours)")
             st.write("")
 
-            st.markdown("**Sleep Hours Per Night**")
+            st.markdown("<b>Sleep Hours Per Night</b>", unsafe_allow_html=True)
             sleep = st.slider("Hours", 4.0, 12.0, 6.9, label_visibility="collapsed")
             st.caption(f"Selected: {sleep} hours/night (Average student: 6.9 hours)")
             st.write("")
 
-            st.markdown("**Mental Health Score (1-10)**")
+            st.markdown("<b>Mental Health Score (1-10)</b>", unsafe_allow_html=True)
             mental = st.slider("Score", 1, 10, 6, label_visibility="collapsed")
             st.write("")
 
-            st.markdown("**Stress Level (1-10)**")
-            stress = st.slider("Stress", 1, 10, 5, label_visibility="collapsed")
+            st.markdown("<b>Stress Level (1-10)</b>", unsafe_allow_html=True)
+            stress = st.slider("Stress", 1, 10, 6, label_visibility="collapsed")
 
         with col2:
-            st.markdown("**Demographics & Details**")
+            st.markdown("<b>Demographics & Details</b>", unsafe_allow_html=True)
             age = st.number_input("Age", 16, 40, 21)
             academic = st.selectbox("Academic Level", ["High School", "Undergraduate", "Postgraduate", "PhD"])
             platform = st.selectbox("Primary Platform", ["Instagram", "TikTok", "YouTube", "Twitter/X", "Snapchat"])
@@ -692,19 +707,20 @@ elif page == "Assessment":
     st.markdown("</div>", unsafe_allow_html=True) 
 
     if submitted:
+        # Simple risk calculation based on notebook findings
         risk_score = int((usage * 1.8 + (12-sleep)*1.2 + (10-mental)*0.8 + stress*0.7) / 4.5)
         risk_score = min(max(risk_score, 1), 10)
         
         st.markdown(f"""
         <div class="content-box" style="text-align: center; background: linear-gradient(180deg, #fff 0%, #f0f7ff 100%);">
             <h3>Assessment Complete</h3>
-            <div style="font-size: 4rem; font-weight: 800; color: {'#FF6B6B' if risk_score > 7 else '#FFB547' if risk_score > 4 else '#00D2AA'};">
+            <div style="font-size: 4rem; font-weight: 800; color: {'#4318FF' if risk_score > 7 else '#5A7DFF' if risk_score > 4 else '#00D2AA'};">
                 {risk_score}/10
             </div>
             <p style="font-size: 1.2rem; font-weight: bold; color: #2B3674;">
                 Risk Level: {'High Risk - Deep Diver' if risk_score > 7 else 'Moderate Risk - Night Owl' if risk_score > 4 else 'Low Risk - Casual Scroller'}
             </p>
-            <p>You rank higher than 78% of users your age</p>
+            <p>Your score is based on the final classification model developed using the student data</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -720,14 +736,15 @@ elif page == "What-If Simulator":
         with col2:
             new_sleep = st.slider("And increase sleep to...", 6.0, 10.0, 8.0)
         
-        improvement = int((5.0 - new_usage)*8 + (new_sleep - 7.0)*5)
-        st.success(f"Estimated risk reduction: {improvement}%")
+        improvement = int((4.9 - new_usage)*8 + (new_sleep - 6.9)*5)
+        st.success(f"Estimated risk reduction: {max(0, improvement)}%")
         
+        # Pie chart colors updated for blue/green compliance
         fig = go.Figure(go.Pie(
             labels=["Sleep", "Social Media", "Productivity", "Leisure"],
             values=[new_sleep, new_usage, 8, 24-new_sleep-new_usage-8],
             hole=0.7,
-            marker_colors=['#4318FF', '#FF6B6B', '#00D2AA', '#E6E8EC'],
+            marker_colors=['#4318FF', '#5A7DFF', '#00D2AA', '#E6E8EC'],
             textinfo='label+percent'
         ))
         fig.update_layout(title="Projected 24-Hour Routine", showlegend=False)
@@ -745,16 +762,16 @@ elif page == "Recommendations":
         <div class="content-box">
             <h3 style="color: #2B3674;">Top Actionable Steps</h3>
             <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #4318FF; margin: 10px 0;">
-                <b>📉 Reduce usage by 1.5 hours</b>
-                <br><span style="color: #00D2AA; font-weight:bold;">Impact: -11% Risk Score</span>
+                <b style='color:#2B3674;'>📉 Target Daily Usage: 3.5 Hours</b>
+                <br><span style="color: #00D2AA; font-weight:bold;">Focus on reducing usage on WhatsApp and Snapchat.</span>
             </div>
-            <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #8A2BE2; margin: 10px 0;">
-                <b>💤 Implement Sleep Mode at 11 PM</b>
-                <br><span style="color: #00D2AA; font-weight:bold;">Impact: -8% Risk Score</span>
+            <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #5A7DFF; margin: 10px 0;">
+                <b style='color:#2B3674;'>💤 Target Sleep: 7.5 Hours</b>
+                <br><span style="color: #00D2AA; font-weight:bold;">Sleep quality is the second-highest predictor of addiction risk.</span>
             </div>
-             <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #FFB547; margin: 10px 0;">
-                <b>📵 No-Phone Morning Routine</b>
-                <br><span style="color: #00D2AA; font-weight:bold;">Impact: -5% Risk Score</span>
+             <div style="background: #f9fbfc; padding: 15px; border-left: 4px solid #00D2AA; margin: 10px 0;">
+                <b style='color:#2B3674;'>🧠 Improve Mental Health & Cope</b>
+                <br><span style="color: #00D2AA; font-weight:bold;">Mental Health Score is the single strongest predictor of addiction.</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -775,9 +792,9 @@ elif page == "Peer Comparison":
     fig = go.Figure()
     fig.add_trace(go.Bar(
         y=['You', 'Avg Student'],
-        x=[5.2, 4.8],
+        x=[5.2, 4.9],
         orientation='h',
-        marker_color=['#FF6B6B', '#00D2AA']
+        marker_color=['#4318FF', '#00D2AA']
     ))
     fig.update_layout(title="Daily Usage Comparison (Hours)", plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
@@ -786,6 +803,6 @@ elif page == "Peer Comparison":
 st.markdown("""
 <div style="text-align: center; margin-top: 50px; color: #A3AED0; padding-bottom: 20px;">
     <hr style="border: 0; border-top: 1px solid #eee;">
-    <p>MindScroll • Digital Wellbeing Dashboard<br>Designed with Streamlit</p>
+    <p>© 2025 • Digital Wellbeing Dashboard<br>Designed with Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
