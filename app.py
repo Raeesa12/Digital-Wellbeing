@@ -1662,29 +1662,46 @@ elif page == "Assessment":
 elif page == "What-If Simulator":
     st.markdown("<h2 class='gradient-text'>Habit Simulator</h2>", unsafe_allow_html=True)
     
-    # Get current (baseline) risk score
-    baseline_risk = st.session_state.get('assessment_risk', 5)
-    
-    # Get other required baseline features (for model consistency)
-    baseline_stress = st.session_state.get('assessment_stress', 6)
+    # Determine whether an assessment has been run and set baseline risk accordingly
+    assessment_present = ('assessment_risk' in st.session_state and st.session_state.get('assessment_risk') is not None)
+    # If no assessment run yet, baseline should be 0 and UI should prompt user to run the assessment
+    baseline_risk = st.session_state.get('assessment_risk') if assessment_present else 0
+
+    # Get other required baseline features (for model consistency) with safe defaults
+    baseline_stress = st.session_state.get('assessment_stress', None)
+    if baseline_stress is None:
+        baseline_stress = 6
     baseline_academic = st.session_state.get('assessment_academic', "Undergraduate")
     baseline_late_night = st.session_state.get('assessment_late_night', False)
     baseline_fomo = st.session_state.get('assessment_fomo', False)
-    baseline_mental = st.session_state.get('assessment_mental', 6)
+    baseline_mental = st.session_state.get('assessment_mental', None)
+    if baseline_mental is None:
+        baseline_mental = 6
     
-    st.info(f"Your **Current Risk Score** is **{baseline_risk}/10** (Based on your last Assessment).")
+    if assessment_present:
+        st.info(f"Your **Current Risk Score** is **{baseline_risk}/10** (Based on your last Assessment).")
+    else:
+        st.info("Your **Current Risk Score** is **0/10**. Run the 'Predict My Risk' assessment to generate a personalized baseline.")
     
     with st.container():
         st.markdown('<div class="content-box">', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown(f"**Baseline Usage:** {st.session_state.assessment_usage:.1f} hours")
+            current_usage_display = st.session_state.get('assessment_usage', 4.9)
+            st.markdown(f"**Baseline Usage:** {current_usage_display:.1f} hours")
             # Use state for initial value (synced from Assessment)
-            new_usage = st.slider("If I reduce daily usage to...", 1.0, 8.0, float(st.session_state.what_if_usage), 0.5, key='what_if_usage')
+            new_usage = st.slider(
+                "If I reduce daily usage to...", 1.0, 8.0,
+                float(st.session_state.get('what_if_usage', current_usage_display)),
+                0.5, key='what_if_usage')
         with col2:
-            st.markdown(f"**Baseline Sleep:** {st.session_state.assessment_sleep:.1f} hours")
+            current_sleep_display = st.session_state.get('assessment_sleep', 6.9)
+            st.markdown(f"**Baseline Sleep:** {current_sleep_display:.1f} hours")
             # Use state for initial value (synced from Assessment)
-            new_sleep = st.slider("And increase sleep to...", 6.0, 10.0, float(st.session_state.what_if_sleep), 0.5, key='what_if_sleep')
+            new_sleep = st.slider(
+                "And increase sleep to...", 6.0, 10.0,
+                float(st.session_state.get('what_if_sleep', current_sleep_display)),
+                0.5, key='what_if_sleep')
         
         # Simulate new risk score based on changes, keeping other features constant
         simulated_risk = predict_risk_score(
@@ -1696,24 +1713,39 @@ elif page == "What-If Simulator":
             late_night=baseline_late_night, 
             fomo=baseline_fomo
         )
-        
-        # Calculate reduction percentage
-        risk_change_absolute = baseline_risk - simulated_risk
-        
-        # Calculate percentage change for display (max 100% reduction, or simple difference if increase)
-        if risk_change_absolute > 0:
-            # Risk reduced
-            risk_reduction_percentage = min(100, int((risk_change_absolute / baseline_risk) * 100)) if baseline_risk > 0 else 0
-            message_html = f"<p style='color:#05CD99; font-weight:bold;'>🎉 Estimated Risk Reduction: {risk_reduction_percentage}%</p>"
+        # Ensure simulated_risk is numeric and fallback to baseline if prediction failed
+        try:
+            simulated_risk = float(simulated_risk)
+        except Exception:
+            simulated_risk = float(baseline_risk)
+
+        # Calculate absolute change (baseline - simulated)
+        risk_change_absolute = float(baseline_risk) - float(simulated_risk)
+
+        # If assessment hasn't been run, do not calculate or display percentage reduction
+        if not assessment_present or baseline_risk == 0:
+            # Prompt the user to run the assessment to get a personalized estimate
+            risk_reduction_percentage = None
+            message_html = "<p style='color:#4318FF; font-weight:bold;'>Run the 'Predict My Risk' assessment to see estimated risk reductions from habit changes.</p>"
         else:
-            # Risk increased or no change
-            message_html = f"<p style='color:#4318FF; font-weight:bold;'>⚠️ Estimated Risk Change: {abs(risk_change_absolute)} points.</p>"
+            # Calculate percentage change for display (max 100% reduction)
+            if risk_change_absolute > 0:
+                # Risk reduced
+                risk_reduction_percentage = min(100, int((risk_change_absolute / baseline_risk) * 100))
+                message_html = f"<p style='color:#05CD99; font-weight:bold;'>🎉 Estimated Risk Reduction: {risk_reduction_percentage}%</p>"
+            else:
+                # Risk increased or no change
+                message_html = f"<p style='color:#4318FF; font-weight:bold;'>⚠️ Estimated Risk Change: {abs(risk_change_absolute)} points.</p>"
 
         col_res, col_chart = st.columns([1, 1])
         
         with col_res:
             st.markdown("##### Simulation Result")
-            st.metric(label="Projected Score", value=f"{simulated_risk}/10", delta=risk_change_absolute)
+            # Show delta only when assessment baseline exists
+            if assessment_present and baseline_risk != 0:
+                st.metric(label="Projected Score", value=f"{simulated_risk}/10", delta=risk_change_absolute)
+            else:
+                st.metric(label="Projected Score", value=f"{simulated_risk}/10")
             st.markdown(message_html, unsafe_allow_html=True)
 
         with col_chart:
