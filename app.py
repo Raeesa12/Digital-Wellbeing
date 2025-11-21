@@ -638,7 +638,7 @@ if page == "Home":
     <div class="hero-section" style="text-align: center;">
         <div class="hero-badge">🎓 Research-Based Digital Wellness Tool</div>
         <h1 class="hero-title">Social Media Addiction<br>Risk Dashboard</h1>
-        <p class="hero-subtitle">Evidence-based assessment tool built on comprehensive analysis of 705 students. Understand your digital habits and get personalized wellness recommendations.</p>
+        <h4 class="hero-title">Evidence-based assessment tool built on comprehensive analysis of 705 students. Understand your digital habits and get personalized wellness recommendations.</h4>
     </div>
     """, unsafe_allow_html=True)
 
